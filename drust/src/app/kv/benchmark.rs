@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Arc, io::Write};
+use std::{fs::File, sync::Arc, io::Write, env};
 
 use rand::{
     distributions::{Distribution, Uniform}, rngs::StdRng, thread_rng, SeedableRng
@@ -15,7 +15,18 @@ static mut KEYS: Option<Vec<Vec<(usize, i32)>>> = None;
 
 pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     let v = ['x' as u8; 32];
-    let csv_file = format!("{}/DRust_home/dataset/dht/zipf/gam_data_0.99_100000000_{}_{}.csv", dirs::home_dir().unwrap().display(), NUM_SERVERS, unsafe{SERVER_INDEX % NUM_SERVERS});
+
+    let csv_file = match env::var("DRUST_WORKLOAD") {
+        Ok(p) => p,
+        Err(_) => {
+            let drust_home = match env::var("DRUST_HOME") {
+                Ok(p) => p,
+                Err(_) => format!("{}/DRust_home/", dirs::home_dir().unwrap().display()),
+            };
+            format!("{}/dataset/dht/zipf/gam_data_0.99_100000000_{}_{}.csv", drust_home, NUM_SERVERS, unsafe { SERVER_INDEX % NUM_SERVERS })
+        }
+    };
+
     let mut rdr = csv::Reader::from_path(csv_file).unwrap();
     let mut cnt = 0;
     let popstart = tokio::time::Instant::now();
@@ -38,7 +49,7 @@ pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     // for i in 0..THREAD_NUM {
     //     keys_vec.push(vec![]);
     // }
-    
+
     // for result in rdr.records() {
     //     let record = result.unwrap();
     //     let key: usize = record[0].parse().unwrap();
@@ -61,7 +72,7 @@ pub async fn benchmark(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     let mut rdr = csv::Reader::from_path(csv_file).unwrap();
     let mut rng = StdRng::seed_from_u64(0);
     let range = Uniform::from(0..100000000);
-    
+
     for result in rdr.records() {
         let record = result.unwrap();
         let key: usize = record[0].parse().unwrap();
@@ -75,7 +86,7 @@ pub async fn benchmark(map: DVecRef<'_, DMutex<GlobalEntry>>) {
             put(&map, key, v).await;
         }
         cnt += 1;
-            
+
     }
 
     let duration = start.elapsed();
@@ -97,10 +108,10 @@ pub async fn zipf_bench() {
         handle.await;
     }
     println!("Populate Elapsed Time: {:?}", popstart.elapsed());
-    
 
 
-    
+
+
     let mut handles = vec![];
     let start = tokio::time::Instant::now();
     for i in 0..NUM_SERVERS {
@@ -108,14 +119,14 @@ pub async fn zipf_bench() {
         let handle: JoinHandle<()> = dspawn_to(benchmark(map_ref), GLOBAL_HEAP_START + i * WORKER_UNIT_SIZE);
         handles.push(handle);
     }
-    
+
     for handle in handles {
         handle.await;
     }
     let time = start.elapsed();
     println!("Total Elapsed Time: {:?}", time);
-    println!("Total Throughput: {:?}", 100000000 as f64 / time.as_secs_f64());   
-    
+    println!("Total Throughput: {:?}", 100000000 as f64 / time.as_secs_f64());
+
     let file_name = format!(
         "{}/DRust_home/logs/kv_drust_{}.txt", dirs::home_dir().unwrap().display(), NUM_SERVERS
     );
