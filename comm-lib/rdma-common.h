@@ -15,14 +15,18 @@
 #define TEST_NZ(x)                                      \
   do                                                    \
   {                                                     \
-    if ((x))                                            \
+    if ((x)) {                                          \
+      perror(#x " failed");                             \
       die("error: " #x " failed (returned non-zero)."); \
+    }                                                   \
   } while (0)
 #define TEST_Z(x)                                        \
   do                                                     \
   {                                                      \
-    if (!(x))                                            \
+    if (!(x)) {                                          \
+      perror(#x " failed");                              \
       die("error: " #x " failed (returned zero/null)."); \
+    }                                                    \
   } while (0)
 #define TOTAL_NUM_SERVERS 2
 #define NUM_SERVERS (TOTAL_NUM_SERVERS - 1)
