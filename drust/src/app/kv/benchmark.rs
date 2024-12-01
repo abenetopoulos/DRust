@@ -113,7 +113,7 @@ pub async fn zipf_bench() {
 
     let popstart = tokio::time::Instant::now();
     let mut handles = vec![];
-    for i in 0..NUM_SERVERS {
+    for i in 0..1 {
         let map_ref = map.as_dref();
         let handle: JoinHandle<()> = dspawn_to(populate(map_ref), GLOBAL_HEAP_START + i * WORKER_UNIT_SIZE);
         handles.push(handle);
