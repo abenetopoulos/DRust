@@ -66,6 +66,17 @@ pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     // unsafe{KEYS = Some(keys_vec);}
 }
 
+fn get_workload_num_lines() -> usize {
+    let mut line_count = 0;
+    let csv_file = get_csv_file_path();
+    let mut rdr = csv::Reader::from_path(csv_file).unwrap();
+    for result in rdr.records() {
+        line_count += 1;
+    }
+
+    line_count
+}
+
 pub async fn benchmark(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     let mut cnt = 0;
     let v = ['x' as u8; 32];
@@ -128,7 +139,9 @@ pub async fn zipf_bench() {
     }
     let time = start.elapsed();
     println!("Total Elapsed Time: {:?}", time);
-    println!("Total Throughput: {:?}", 100000000 as f64 / time.as_secs_f64());
+
+    let total_num_requests = get_workload_num_lines() * NUM_SERVERS;
+    println!("Total Throughput: {:?}", total_num_requests as f64 / time.as_secs_f64());
 
     let drust_home = match env::var("DRUST_HOME") {
         Ok(p) => p,
