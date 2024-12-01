@@ -87,12 +87,14 @@ pub async fn drust_main(
             app::dataframe::run().await;
         } else if app == "kv" {
             app::kv::run().await;
+        } else if app == "kv_remote" {
+            app::kv::setup().await;
         } else if app == "sn" {
             app::socialnet::run().await;
         } else {
             panic!("unknown app");
         }
-        
+
         println!("drust_main done");
         rshutdown(&safepoint_addrs).await;
     } else {

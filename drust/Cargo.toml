@@ -45,6 +45,7 @@ ffmpeg-next = "6.0.0"
 imageproc = "0.23.0"
 image = "0.24.7"
 dirs = "5.0"
+actix-web = "4.9.0"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.5.4"
