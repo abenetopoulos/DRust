@@ -130,8 +130,12 @@ pub async fn zipf_bench() {
     println!("Total Elapsed Time: {:?}", time);
     println!("Total Throughput: {:?}", 100000000 as f64 / time.as_secs_f64());
 
+    let drust_home = match env::var("DRUST_HOME") {
+        Ok(p) => p,
+        Err(_) => format!("{}/DRust_home/", dirs::home_dir().unwrap().display()),
+    };
     let file_name = format!(
-        "{}/DRust_home/logs/kv_drust_{}.txt", dirs::home_dir().unwrap().display(), NUM_SERVERS
+        "{}/logs/kv_drust_{}.txt", drust_home, NUM_SERVERS
     );
     let mut wrt_file = File::create(file_name).expect("file");
     let milli_seconds = time.as_millis();
