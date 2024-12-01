@@ -20,7 +20,7 @@ pub mod dmap;
 pub struct RequestPayload {
     action: String,
     key: usize,
-    value: Option<usize>,
+    value: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,17 +53,22 @@ pub async fn process(
     map: web::Data<DVec<DMutex<GlobalEntry>>>,
     intent: web::Json<RequestPayload>,
 ) -> impl Responder {
+    let map = map.get_ref();
+    let map_ref = map.as_dref();
     let res = match intent.action.as_str() {
         "put" => {
             let key = intent.key;
-            let value = intent.value.unwrap();
-            put(&map, key, value).await;
+            let mut value = ['x' as u8; 32];
+            for (idx, byte) in intent.value.as_ref().unwrap().as_bytes().iter().enumerate() {
+                value[idx] = *byte;
+            }
+            put(&map_ref, key, value).await;
 
             None
         },
         "get" => {
             let key = intent.key;
-            get_safe(&map, key).await
+            get_safe(&map_ref, key).await
         }
         a @ _ => {
             eprintln!("unrecognized kvs command: {}", a);
@@ -71,5 +76,8 @@ pub async fn process(
         },
     };
 
-    HttpResponse::Ok().json(ResponsePayload { value: res.into() })
+    match res {
+        None => HttpResponse::Ok().json(ResponsePayload { value: None }),
+        Some(ref r) => HttpResponse::Ok().json(ResponsePayload { value: Some(String::from_utf8_lossy(r).into_owned()) }),
+    }
 }
