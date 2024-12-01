@@ -53,7 +53,7 @@ pub async fn process(
     map: web::Data<DVec<DMutex<GlobalEntry>>>,
     intent: web::Json<RequestPayload>,
 ) -> impl Responder {
-    let res = match &intent.action {
+    let res = match intent.action.as_str() {
         "put" => {
             let key = intent.key;
             let value = intent.value.unwrap();
@@ -63,7 +63,7 @@ pub async fn process(
         },
         "get" => {
             let key = intent.key;
-            get(&map, key).await
+            get_safe(&map, key).await
         }
         a @ _ => {
             eprintln!("unrecognized kvs command: {}", a);
@@ -71,5 +71,5 @@ pub async fn process(
         },
     };
 
-    HttpResponse::Ok().json(ResponsePayload { value: res })
+    HttpResponse::Ok().json(ResponsePayload { value: res.into() })
 }

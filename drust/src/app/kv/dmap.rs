@@ -15,6 +15,23 @@ impl KVStore {
     }
 }
 
+pub async fn get_safe(map: &DVecRef<'_, DMutex<GlobalEntry>>, key: usize) -> Option<[u8; 32]> {
+    let map_ref = map.as_ref();
+    let bucket_id = bucket(key);
+    let m = match map_ref.get(bucket_id) {
+        None => return None,
+        Some(v) => v,
+    };
+
+    let value_ref = m.lock();
+    let v = value_ref.value;
+    m.unlock(value_ref);
+
+    Some(v)
+}
+
+
+
 
 pub async fn get(map: &DVecRef<'_, DMutex<GlobalEntry>>, key: usize) -> [u8; 32] {
     let map_ref = map.as_ref();
@@ -27,7 +44,7 @@ pub async fn get(map: &DVecRef<'_, DMutex<GlobalEntry>>, key: usize) -> [u8; 32]
 }
 
 pub async fn put(map: &DVecRef<'_, DMutex<GlobalEntry>>, key: usize, value: [u8; 32]) {
-    
+
     let map_ref = map.as_ref();
     let bucket_id = bucket(key);
     let m = map_ref.get(bucket_id).unwrap();
