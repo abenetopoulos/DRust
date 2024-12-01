@@ -2,14 +2,16 @@ use actix_web::{post, web, HttpResponse, HttpServer, Responder, App};
 use serde::{Serialize, Deserialize};
 
 use crate::{
-    conf::NUM_SERVERS, drust_std::utils::{ResourceManager, COMPUTES},
+    conf::{NUM_SERVERS, WORKER_UNIT_SIZE, GLOBAL_HEAP_START}, drust_std::utils::{ResourceManager, COMPUTES},
     drust_std::{
         collections::dvec::{DVec, DVecRef},
         sync::dmutex::DMutex,
+        thread::dspawn_to,
     },
 };
 use dmap::*;
 use entry::GlobalEntry;
+use tokio::task::JoinHandle;
 
 pub mod entry;
 pub mod conf;
@@ -36,25 +38,46 @@ pub async fn run() {
     benchmark::zipf_bench().await;
 }
 
+pub async fn setup_frontend(map: DVecRef<'_, DMutex<GlobalEntry>>) {
+    let map_ref = web::Data::new(map);
+    println!("about to setup frontend on port 52017");
+
+    HttpServer::new(move || {
+        App::new().app_data(map_ref.clone()).service(web::resource("/schedule").to(process))
+    }).bind(("0.0.0.0", 52017)).expect("failed to bind frontend to address").run().await;
+}
+
 pub async fn setup() {
     unsafe {
         COMPUTES = Some(ResourceManager::new(NUM_SERVERS));
     }
 
-    let map = web::Data::new(KVStore::new());
+    let map = KVStore::new();
+    let map_ref = web::Data::new(map.as_dref());
+
+    {
+        let mut handles = vec![];
+        for i in 1..NUM_SERVERS {
+            let map_ref = map.as_dref();
+            let handle: JoinHandle<()> = dspawn_to(setup_frontend(map_ref), GLOBAL_HEAP_START + i * WORKER_UNIT_SIZE);
+            handles.push(handle);
+        }
+        for handle in handles {
+            handle.await;
+        }
+    }
 
     println!("about to setup frontend on port 52017");
     HttpServer::new(move || {
-        App::new().app_data(map.clone()).service(web::resource("/schedule").to(process))
+        App::new().app_data(map_ref.clone()).service(web::resource("/schedule").to(process))
     }).bind(("0.0.0.0", 52017)).expect("failed to bind frontend to address").run().await;
 }
 
 pub async fn process(
-    map: web::Data<DVec<DMutex<GlobalEntry>>>,
+    map: web::Data<DVecRef<DMutex<GlobalEntry>>>,
     intent: web::Json<RequestPayload>,
 ) -> impl Responder {
-    let map = map.get_ref();
-    let map_ref = map.as_dref();
+    let map_ref = map.get_ref();
     let res = match intent.action.as_str() {
         "put" => {
             let key = intent.key;
