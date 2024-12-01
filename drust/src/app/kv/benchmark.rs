@@ -13,10 +13,8 @@ use crate::{conf::{GLOBAL_HEAP_START, NUM_SERVERS, SERVER_INDEX, WORKER_UNIT_SIZ
 
 static mut KEYS: Option<Vec<Vec<(usize, i32)>>> = None;
 
-pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
-    let v = ['x' as u8; 32];
-
-    let csv_file = match env::var("DRUST_WORKLOAD") {
+fn get_csv_file_path() -> String {
+    match env::var("DRUST_WORKLOAD") {
         Ok(p) => p,
         Err(_) => {
             let drust_home = match env::var("DRUST_HOME") {
@@ -25,8 +23,13 @@ pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
             };
             format!("{}/dataset/dht/zipf/gam_data_0.99_100000000_{}_{}.csv", drust_home, NUM_SERVERS, unsafe { SERVER_INDEX % NUM_SERVERS })
         }
-    };
+    }
+}
 
+pub async fn populate(map: DVecRef<'_, DMutex<GlobalEntry>>) {
+    let v = ['x' as u8; 32];
+
+    let csv_file = get_csv_file_path();
     let mut rdr = csv::Reader::from_path(csv_file).unwrap();
     let mut cnt = 0;
     let popstart = tokio::time::Instant::now();
@@ -68,7 +71,7 @@ pub async fn benchmark(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     let v = ['x' as u8; 32];
     let start = tokio::time::Instant::now();
 
-    let csv_file = format!("{}/DRust_home/dataset/dht/zipf/gam_data_0.99_100000000_{}_{}.csv", dirs::home_dir().unwrap().display(), NUM_SERVERS, unsafe{(SERVER_INDEX + 1) % NUM_SERVERS});
+    let csv_file = get_csv_file_path();
     let mut rdr = csv::Reader::from_path(csv_file).unwrap();
     let mut rng = StdRng::seed_from_u64(0);
     let range = Uniform::from(0..100000000);
