@@ -88,7 +88,8 @@ pub async fn drust_main(
         } else if app == "kv" {
             app::kv::run().await;
         } else if app == "kv_remote" {
-            app::kv::setup().await;
+            // app::kv::setup().await;
+            panic!("remote kv is disabled");
         } else if app == "sn" {
             app::socialnet::run().await;
         } else {

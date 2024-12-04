@@ -38,6 +38,7 @@ pub async fn run() {
     benchmark::zipf_bench().await;
 }
 
+/*
 pub async fn setup_frontend(map: DVecRef<'_, DMutex<GlobalEntry>>) {
     let map_ref = web::Data::new(map);
     println!("about to setup frontend on port 52017");
@@ -53,12 +54,12 @@ pub async fn setup() {
     }
 
     let map = KVStore::new();
-    let map_ref = web::Data::new(map.as_dref());
+    let map_ref = web::Data::new(map);
 
     {
         let mut handles = vec![];
         for i in 1..NUM_SERVERS {
-            let map_ref = map.as_dref();
+            let map_ref = map_ref.get_ref().as_dref();
             let handle: JoinHandle<()> = dspawn_to(setup_frontend(map_ref), GLOBAL_HEAP_START + i * WORKER_UNIT_SIZE);
             handles.push(handle);
         }
@@ -74,7 +75,7 @@ pub async fn setup() {
 }
 
 pub async fn process(
-    map: web::Data<DVecRef<DMutex<GlobalEntry>>>,
+    map: web::Data<DVecRef<'static, DMutex<GlobalEntry>>>,
     intent: web::Json<RequestPayload>,
 ) -> impl Responder {
     let map_ref = map.get_ref();
@@ -104,3 +105,4 @@ pub async fn process(
         Some(ref r) => HttpResponse::Ok().json(ResponsePayload { value: Some(String::from_utf8_lossy(r).into_owned()) }),
     }
 }
+*/
